@@ -1,0 +1,131 @@
+# Shared services for both profiles
+services:
+  # Development service
+  backend-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.dev
+    container_name: express-backend-dev
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Node.js debug port
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DEBUG=express:*
+    volumes:
+      - ./src:/usr/src/app/src
+      - ./package.json:/usr/src/app/package.json
+      - /usr/src/app/node_modules  # Anonymous volume for node_modules
+    restart: unless-stopped
+    networks:
+      - app-network
+    command: npm run dev
+    stdin_open: true  # For debugging
+    tty: true         # For debugging
+
+  # Production service
+  backend-prod:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.prod
+    container_name: express-backend-prod
+    ports:
+      - "80:3000"  # Map to standard HTTP port
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # In production, we typically don't mount source code
+      # Only mount logs or data if needed
+      - ./logs:/usr/src/app/logs
+    restart: always
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  # Optional: Add database for both profiles
+  # postgres:
+  #   profiles: ["dev", "prod"]
+  #   image: postgres:15-alpine
+  #   container_name: postgres-db
+  #   environment:
+  #     - POSTGRES_USER=admin
+  #     - POSTGRES_PASSWORD=secret
+  #     - POSTGRES_DB=appdb
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U admin"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Optional: Redis for caching (production only)
+  # redis:
+  #   profiles: ["prod"]
+  #   image: redis:7-alpine
+  #   container_name: redis-cache
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - app-network
+  #   command: redis-server --appendonly yes
+
+  # Optional: Nginx reverse proxy (production only)
+  # nginx:
+  #   profiles: ["prod"]
+  #   image: nginx:alpine
+  #   container_name: nginx-proxy
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf
+  #     - ./ssl:/etc/nginx/ssl
+  #   depends_on:
+  #     - backend-prod
+  #   networks:
+  #     - app-network
+
+  # Optional: Adminer for database management (dev only)
+  # adminer:
+  #   profiles: ["dev"]
+  #   image: adminer
+  #   container_name: adminer-db
+  #   ports:
+  #     - "8081:8080"
+  #   environment:
+  #     - ADMINER_DEFAULT_SERVER=postgres
+  #   networks:
+  #     - app-network
+
+# Networks
+networks:
+  app-network:
+    driver: bridge
+
+# Volumes
+# volumes:
+#   postgres-data:
+#     driver: local
+#   redis-data:
+#     driver: local

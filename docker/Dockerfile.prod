@@ -1,0 +1,51 @@
+# Production Dockerfile (Multi-stage build)
+# Stage 1: Builder
+FROM node:18-alpine AS builder
+
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies for building
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# =====================================
+# Add build steps here if you need them
+# Example: RUN npm run build
+# =====================================
+
+# Stage 2: Production
+FROM node:18-alpine AS production
+
+# Install only production dependencies
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# Copy built application from builder stage
+COPY --from=builder /usr/src/app/src ./src
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /usr/src/app
+
+USER nodejs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {if(r.statusCode!==200)throw new Error(r.statusCode)})"
+
+# Expose port
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "start"]
