@@ -3,13 +3,14 @@ const router = express.Router();
 
 const bodyParser = require('body-parser');
 
-const { getStoredPosts, storePosts } = require('./data/posts');
+const { getStoredPosts, storePosts } = require('../data/posts');
 
 
 router.get('/posts', async (req, res) => {
   const storedPosts = await getStoredPosts();
   // await new Promise((resolve, reject) => setTimeout(() => resolve(), 1500));
   res.json({ posts: storedPosts });
+  // res.json({result: 'ok'})
 });
 
 router.get('/posts/:id', async (req, res) => {
