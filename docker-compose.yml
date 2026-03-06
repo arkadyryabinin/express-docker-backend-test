@@ -19,8 +19,8 @@ services:
       - ./package.json:/usr/src/app/package.json
       - /usr/src/app/node_modules  # Anonymous volume for node_modules
     restart: unless-stopped
-    networks:
-      - app-network
+    # networks:
+    #   - app-network
     command: npm run dev
     stdin_open: true  # For debugging
     tty: true         # For debugging
@@ -42,8 +42,8 @@ services:
       # Only mount logs or data if needed
       - ./logs:/usr/src/app/logs
     restart: always
-    networks:
-      - app-network
+    # networks:
+    #   - app-network
     deploy:
       resources:
         limits:
@@ -119,9 +119,9 @@ services:
   #     - app-network
 
 # Networks
-networks:
-  app-network:
-    driver: bridge
+# networks:
+#   app-network:
+#     driver: bridge
 
 # Volumes
 # volumes:
